@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shipping Calculator</title>
+  <meta name="description" content="Estimate truss delivery cost from mileage and pilot drivers.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Michroma&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #144464;
+      --primary-dark: #123a57;
+      --primary-soft: #eef3f8;
+      --ring: #1444644d;
+      --bg: #FCFCFC;
+      --surface: #ffffff;
+      --text: #1d2430;
+      --muted: #788293;
+      --border: #d8e2eb;
+      --header-bg: #ffffff;
+      --shadow: 0 10px 30px #14446414;
+    }
+    :root[data-theme="dark"] {
+      --primary: #4a8cc0;
+      --primary-dark: #3b7aac;
+      --primary-soft: #1d2a3a;
+      --ring: #4a8cc066;
+      --bg: #121723;
+      --surface: #1d2430;
+      --text: #f1f4f8;
+      --muted: #9ca3af;
+      --border: #2c303b;
+      --header-bg: #0b1224;
+      --shadow: 0 10px 30px #00000055;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --primary: #4a8cc0;
+        --primary-dark: #3b7aac;
+        --primary-soft: #1d2a3a;
+        --ring: #4a8cc066;
+        --bg: #121723;
+        --surface: #1d2430;
+        --text: #f1f4f8;
+        --muted: #9ca3af;
+        --border: #2c303b;
+        --header-bg: #0b1224;
+        --shadow: 0 10px 30px #00000055;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .display { font-family: Michroma, Inter, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+
+    header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .bar {
+      max-width: 960px; margin: 0 auto; padding: 18px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .brand { font-size: 15px; color: var(--primary); font-weight: 400; margin: 0; }
+    .theme-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 13px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0b1224 0%, #144464 100%);
+      color: #fff; padding: 44px 16px 72px; text-align: center;
+    }
+    .hero h1 { margin: 0 0 8px; font-size: clamp(20px, 4.5vw, 32px); font-weight: 400; }
+    .hero p { margin: 0 auto; max-width: 520px; color: #ffffffb3; font-size: 15px; }
+
+    main { flex: 1; width: 100%; max-width: 960px; margin: -44px auto 40px; padding: 0 16px; }
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow); padding: 24px;
+    }
+    .card h2 { margin: 0 0 18px; font-size: 13px; font-weight: 400; color: var(--primary); }
+
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .input-wrap { position: relative; display: flex; align-items: center; }
+    .input-wrap .affix {
+      position: absolute; font-size: 14px; color: var(--muted); pointer-events: none;
+    }
+    .input-wrap .pre { left: 12px; }
+    .input-wrap .suf { right: 12px; }
+    input[type="number"] {
+      width: 100%; font: inherit; font-size: 16px; color: var(--text);
+      background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      padding: 11px 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+      -moz-appearance: textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .has-pre input { padding-left: 26px; }
+    .has-suf input { padding-right: 64px; }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+    input.invalid { border-color: #c0392b; }
+
+    .stepper { display: flex; gap: 8px; }
+    .stepper button {
+      flex: 0 0 46px; font-size: 20px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--primary-soft); color: var(--primary); cursor: pointer;
+    }
+    .stepper button:hover { border-color: var(--primary); }
+    .stepper input { text-align: center; }
+
+    .toggle { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .toggle input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+    details { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 14px; }
+    summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--primary); }
+    .rates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    @media (max-width: 420px) { .rates { grid-template-columns: 1fr; } }
+    .rates .field { margin-bottom: 0; }
+    .link-btn { background: none; border: 0; padding: 0; margin-top: 10px; color: var(--muted); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+
+    .total-label { font-size: 13px; color: var(--muted); margin: 0; }
+    .total {
+      font-size: clamp(34px, 7vw, 44px); font-weight: 700; color: var(--primary);
+      margin: 2px 0 20px; font-variant-numeric: tabular-nums; word-break: break-word;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+    td { padding: 10px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+    td:last-child { text-align: right; font-weight: 600; white-space: nowrap; padding-left: 12px; }
+    td small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+    tr.sum td { border-bottom: 0; font-weight: 700; }
+
+    .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .btn {
+      flex: 1 1 140px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+      border-radius: 8px; padding: 12px 14px; border: 1px solid var(--primary);
+      background: var(--primary); color: #fff; transition: background .15s;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .btn.ghost { background: transparent; color: var(--primary); }
+    .btn.ghost:hover { background: var(--primary-soft); }
+
+    footer { text-align: center; color: var(--muted); font-size: 12px; padding: 0 16px 28px; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+      background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px;
+      font-size: 14px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media print {
+      header, .hero, details, .actions, .theme-btn, footer { display: none !important; }
+      main { margin: 0; }
+      .card { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <p class="brand display">Shipping Calculator</p>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle dark mode">Theme</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1 class="display">Delivery Cost Estimate</h1>
+    <p>Enter the trip mileage and pilot drivers to get an instant shipping total.</p>
+  </section>
+
+  <main>
+    <div class="grid">
+      <section class="card" aria-labelledby="tripHead">
+        <h2 id="tripHead" class="display">Trip details</h2>
+
+        <div class="field">
+          <label for="miles">Total miles</label>
+          <div class="input-wrap has-suf">
+            <input type="number" id="miles" inputmode="decimal" min="0" step="any" placeholder="0">
+            <span class="affix suf">miles</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pilots">Pilot drivers</label>
+          <div class="stepper">
+            <button type="button" data-step="-1" aria-label="Remove a pilot driver">−</button>
+            <input type="number" id="pilots" inputmode="numeric" min="0" step="1" value="0">
+            <button type="button" data-step="1" aria-label="Add a pilot driver">+</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="toggle"><input type="checkbox" id="roundTrip"> Round trip (double the miles)</label>
+        </div>
+
+        <details>
+          <summary>Rates</summary>
+          <div class="rates">
+            <div class="field">
+              <label for="baseRate">Truck rate</label>
+              <div class="input-wrap has-pre has-suf">
+                <span class="affix pre">$</span>
+                <input type="number" id="baseRate" inputmode="decimal" min="0" step="0.01">
+                <span class="affix suf">/ mile</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="pilotRate">Pilot rate</label>
+              <div class="input-wrap has-pre has-suf">
+                <span class="affix pre">$</span>
+                <input type="number" id="pilotRate" inputmode="decimal" min="0" step="0.01">
+                <span class="affix suf">/ mile</span>
+              </div>
+            </div>
+          </div>
+          <div class="hint">Rates are saved on this device.</div>
+          <button type="button" class="link-btn" id="resetRates">Reset to $4.00 / mile</button>
+        </details>
+      </section>
+
+      <section class="card" aria-labelledby="sumHead" aria-live="polite">
+        <h2 id="sumHead" class="display">Estimate</h2>
+        <p class="total-label">Total shipping cost</p>
+        <p class="total" id="total">$0.00</p>
+        <table>
+          <tbody>
+            <tr><td>Truck<small id="baseDetail">0 mi × $4.00</small></td><td id="baseCost">$0.00</td></tr>
+            <tr><td>Pilot drivers<small id="pilotDetail">0 × 0 mi × $4.00</small></td><td id="pilotCost">$0.00</td></tr>
+            <tr class="sum"><td>Total</td><td id="total2">$0.00</td></tr>
+          </tbody>
+        </table>
+        <div class="actions">
+          <button type="button" class="btn" id="copyBtn">Copy quote</button>
+          <button type="button" class="btn ghost" id="clearBtn">Clear</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>Estimates only. Final pricing may vary.</footer>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const DEFAULT_RATE = 4.00;
+    const $ = id => document.getElementById(id);
+    const els = {
+      miles: $('miles'), pilots: $('pilots'), roundTrip: $('roundTrip'),
+      baseRate: $('baseRate'), pilotRate: $('pilotRate')
+    };
+    const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const num = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
+
+    function store(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+    function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
+    els.baseRate.value = (parseFloat(load('sc.baseRate')) || DEFAULT_RATE).toFixed(2);
+    els.pilotRate.value = (parseFloat(load('sc.pilotRate')) || DEFAULT_RATE).toFixed(2);
+
+    function read(el, { int = false } = {}) {
+      const raw = el.value.trim();
+      let v = raw === '' ? 0 : Number(raw);
+      const bad = !Number.isFinite(v) || v < 0 || (int && !Number.isInteger(v));
+      el.classList.toggle('invalid', bad);
+      if (bad) v = 0;
+      return v;
+    }
+
+    let last = null;
+    function calculate() {
+      const oneWay = read(els.miles);
+      const pilots = read(els.pilots, { int: true });
+      const baseRate = read(els.baseRate);
+      const pilotRate = read(els.pilotRate);
+      const miles = els.roundTrip.checked ? oneWay * 2 : oneWay;
+
+      const baseCost = miles * baseRate;
+      const pilotCost = miles * pilotRate * pilots;
+      const total = baseCost + pilotCost;
+
+      $('baseDetail').textContent = `${num.format(miles)} mi × ${money.format(baseRate)}`;
+      $('pilotDetail').textContent = `${pilots} × ${num.format(miles)} mi × ${money.format(pilotRate)}`;
+      $('baseCost').textContent = money.format(baseCost);
+      $('pilotCost').textContent = money.format(pilotCost);
+      $('total').textContent = money.format(total);
+      $('total2').textContent = money.format(total);
+      last = { oneWay, miles, pilots, baseRate, pilotRate, baseCost, pilotCost, total, round: els.roundTrip.checked };
+    }
+
+    Object.values(els).forEach(el => el.addEventListener('input', calculate));
+    els.baseRate.addEventListener('change', () => store('sc.baseRate', els.baseRate.value));
+    els.pilotRate.addEventListener('change', () => store('sc.pilotRate', els.pilotRate.value));
+
+    document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+      const cur = Math.max(0, Math.floor(Number(els.pilots.value) || 0));
+      els.pilots.value = Math.max(0, cur + Number(b.dataset.step));
+      calculate();
+    }));
+
+    $('resetRates').addEventListener('click', () => {
+      els.baseRate.value = els.pilotRate.value = DEFAULT_RATE.toFixed(2);
+      store('sc.baseRate', els.baseRate.value); store('sc.pilotRate', els.pilotRate.value);
+      calculate();
+    });
+
+    $('clearBtn').addEventListener('click', () => {
+      els.miles.value = ''; els.pilots.value = 0; els.roundTrip.checked = false;
+      calculate(); els.miles.focus();
+    });
+
+    function toast(msg) {
+      const t = $('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    $('copyBtn').addEventListener('click', async () => {
+      const q = last;
+      const text = [
+        'Shipping Estimate',
+        `Miles: ${num.format(q.miles)}${q.round ? ` (round trip, ${num.format(q.oneWay)} each way)` : ''}`,
+        `Truck: ${num.format(q.miles)} mi × ${money.format(q.baseRate)} = ${money.format(q.baseCost)}`,
+        `Pilot drivers: ${q.pilots} × ${num.format(q.miles)} mi × ${money.format(q.pilotRate)} = ${money.format(q.pilotCost)}`,
+        `Total: ${money.format(q.total)}`
+      ].join('\n');
+      try { await navigator.clipboard.writeText(text); toast('Quote copied'); }
+      catch (e) { toast('Copy not available in this browser'); }
+    });
+
+    // Theme toggle
+    const root = document.documentElement;
+    const saved = load('sc.theme');
+    if (saved) root.dataset.theme = saved;
+    function isDark() {
+      return root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    function label() { $('themeBtn').textContent = isDark() ? 'Light mode' : 'Dark mode'; }
+    $('themeBtn').addEventListener('click', () => {
+      root.dataset.theme = isDark() ? 'light' : 'dark';
+      store('sc.theme', root.dataset.theme); label();
+    });
+    label();
+    calculate();
+  </script>
+</body>
+</html>
